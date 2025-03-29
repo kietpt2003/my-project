@@ -1,3 +1,23 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json"
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": "./src",
+    "paths": {
+      "constant": [
+        "./constants"
+      ],
+      "layout": [
+        "./views/Layout"
+      ],
+      "utils": [
+        "./utils"
+      ],
+    },
+    "esModuleInterop": true,
+    "jsx": "react"
+  },
+  "exclude": [
+    "node_modules"
+  ]
 }
