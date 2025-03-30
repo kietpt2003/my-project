@@ -15,7 +15,7 @@ import {
 } from 'react-native-vision-camera'
 import { Camera } from 'react-native-vision-camera'
 import { CONTENT_SPACING, CONTROL_BUTTON_SIZE, MAX_ZOOM_FACTOR, SAFE_AREA_PADDING, SCREEN_HEIGHT, SCREEN_WIDTH } from 'constant'
-import Reanimated, { Extrapolate, interpolate, useAnimatedGestureHandler, useAnimatedProps, useSharedValue } from 'react-native-reanimated'
+import Reanimated, { Extrapolate, interpolate, runOnJS, useAnimatedGestureHandler, useAnimatedProps, useSharedValue } from 'react-native-reanimated'
 import { useEffect } from 'react'
 import { useIsForeground } from '../hooks/useIsForeground'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -26,6 +26,9 @@ import { CaptureButton } from './CaptureButton'
 import { StatusBarBlurBackground } from './StatusBarBlurBackground'
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons'
 import IonIcon from 'react-native-vector-icons/Ionicons'
+import { NativeModules } from 'react-native'
+
+const { FacialRecognition } = NativeModules // Import the native module
 
 const ReanimatedCamera = Reanimated.createAnimatedComponent(Camera)
 Reanimated.addWhitelistedNativeProps({
@@ -139,6 +142,19 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
     }, [onFlipCameraPressed])
     //#endregion
 
+    const startFacialRecognition = () => {
+        console.log('Starting facial recognition...')
+        FacialRecognition.getName(
+            (result: string) => {
+                console.log(`Facial recognition result: ${result}`)
+                // Handle the result of facial recognition
+            },
+            (error: string) => {
+                console.error(`Facial recognition error: ${error}`)
+            }
+        )
+    }
+
     //#region Effects
     useEffect(() => {
         // Reset zoom to it's default everytime the `device` changes.
@@ -174,13 +190,29 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
         location.requestPermission()
     }, [location])
 
+    async function processImageBuffer(buffer: ArrayBuffer, width: number, height: number) {
+        const base64Image = Buffer.from(new Uint8Array(buffer)).toString('base64');
+        try {
+            const faces = await FacialRecognition.detectFaces(base64Image);
+            console.log('Detected Faces:', faces);
+        } catch (error) {
+            console.error('Error detecting faces:', error);
+        }
+    }
+
     const frameProcessor = useFrameProcessor((frame) => {
         'worklet'
 
         runAtTargetFps(10, () => {
             'worklet'
-            console.log(`${frame.timestamp}: ${frame.width}x${frame.height} ${frame.pixelFormat} Frame (${frame.orientation})`)
-            console.log("my frame", frame.toString());
+            try {
+                if (frame.pixelFormat === 'rgb') {
+                    const buffer = frame.toArrayBuffer();
+                    runOnJS(processImageBuffer)(buffer, frame.width, frame.height);
+                }
+            } catch (error) {
+                console.error('Error processing frame:', error);
+            }
         })
     }, [])
 
