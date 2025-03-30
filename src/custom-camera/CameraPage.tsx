@@ -142,19 +142,6 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
     }, [onFlipCameraPressed])
     //#endregion
 
-    const startFacialRecognition = () => {
-        console.log('Starting facial recognition...')
-        FacialRecognition.getName(
-            (result: string) => {
-                console.log(`Facial recognition result: ${result}`)
-                // Handle the result of facial recognition
-            },
-            (error: string) => {
-                console.error(`Facial recognition error: ${error}`)
-            }
-        )
-    }
-
     //#region Effects
     useEffect(() => {
         // Reset zoom to it's default everytime the `device` changes.
@@ -206,8 +193,10 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
         runAtTargetFps(10, () => {
             'worklet'
             try {
+                console.log("vo day");
                 if (frame.pixelFormat === 'rgb') {
                     const buffer = frame.toArrayBuffer();
+
                     runOnJS(processImageBuffer)(buffer, frame.width, frame.height);
                 }
             } catch (error) {
