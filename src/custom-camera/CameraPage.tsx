@@ -12,6 +12,7 @@ import {
     useFrameProcessor,
     useLocationPermission,
     useMicrophonePermission,
+    VisionCameraProxy,
 } from 'react-native-vision-camera'
 import { Camera } from 'react-native-vision-camera'
 import { CONTENT_SPACING, CONTROL_BUTTON_SIZE, MAX_ZOOM_FACTOR, SAFE_AREA_PADDING, SCREEN_HEIGHT, SCREEN_WIDTH } from 'constant'
@@ -27,6 +28,9 @@ import { StatusBarBlurBackground } from './StatusBarBlurBackground'
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons'
 import IonIcon from 'react-native-vector-icons/Ionicons'
 import { NativeModules } from 'react-native'
+import { FaceData, facialRecognition } from 'utils/facialRecognition'
+import FaceBoundingBox from './FaceBoundingBox'
+import { useRunOnJS, useSharedValue as useSharedValueWL, Worklets } from 'react-native-worklets-core'
 
 const { FacialRecognition } = NativeModules // Import the native module
 
@@ -177,30 +181,34 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
         location.requestPermission()
     }, [location])
 
-    async function processImageBuffer(buffer: ArrayBuffer, width: number, height: number) {
-        const base64Image = Buffer.from(new Uint8Array(buffer)).toString('base64');
-        try {
-            const faces = await FacialRecognition.detectFaces(base64Image);
-            console.log('Detected Faces:', faces);
-        } catch (error) {
-            console.error('Error detecting faces:', error);
-        }
-    }
+    const facesSharedValue = useSharedValueWL<FaceData[]>([]);
+    const [faces, setFaces] = useState<FaceData[]>([]);
 
+    // Cập nhật UI khi facesSharedValue thay đổi
+    // useEffect(() => {
+    //     const updateFaces = () => {
+    //         Worklets.runOnJS(() => {
+    //             setFaces(facesSharedValue.value)
+    //         });
+    //     };
+    //     updateFaces();
+    // }, [facesSharedValue.value]);
+
+    const updateResults = useRunOnJS((results) => {
+        setFaces(results);
+    }, []);
+
+    const plugin = VisionCameraProxy.initFrameProcessorPlugin('facial-recognition', {});
     const frameProcessor = useFrameProcessor((frame) => {
         'worklet'
 
         runAtTargetFps(10, () => {
-            'worklet'
             try {
-                console.log("vo day");
-                if (frame.pixelFormat === 'rgb') {
-                    const buffer = frame.toArrayBuffer();
-
-                    runOnJS(processImageBuffer)(buffer, frame.width, frame.height);
-                }
+                const result = facialRecognition(frame, undefined, plugin);
+                console.log('Facial Recognition Result:', result.faces.length);
+                updateResults(result.faces);
             } catch (error) {
-                console.error('Error processing frame:', error);
+                console.error('Facial Recognition Error:', error);
             }
         })
     }, [])
@@ -211,48 +219,60 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
     return (
         <View style={styles.container}>
             {device != null ? (
-                <PinchGestureHandler onGestureEvent={onPinchGesture} enabled={isActive}>
-                    <Reanimated.View onTouchEnd={onFocusTap} style={StyleSheet.absoluteFill}>
-                        <TapGestureHandler onEnded={onDoubleTap} numberOfTaps={2}>
-                            <ReanimatedCamera
-                                style={StyleSheet.absoluteFill}
-                                device={device}
-                                isActive={isActive}
-                                ref={camera}
-                                onInitialized={onInitialized}
-                                onError={onError}
-                                onStarted={() => console.log('Camera started!')}
-                                onStopped={() => console.log('Camera stopped!')}
-                                onPreviewStarted={() => console.log('Preview started!')}
-                                onPreviewStopped={() => console.log('Preview stopped!')}
-                                onOutputOrientationChanged={(o) => console.log(`Output orientation changed to ${o}!`)}
-                                onPreviewOrientationChanged={(o) => console.log(`Preview orientation changed to ${o}!`)}
-                                onUIRotationChanged={(degrees) => console.log(`UI Rotation changed: ${degrees}°`)}
-                                format={format}
-                                fps={fps}
-                                photoHdr={photoHdr}
-                                videoHdr={videoHdr}
-                                photoQualityBalance="quality"
-                                lowLightBoost={device.supportsLowLightBoost && enableNightMode}
-                                enableZoomGesture={false}
-                                animatedProps={cameraAnimatedProps}
-                                exposure={0}
-                                enableFpsGraph={true}
-                                outputOrientation="device"
-                                photo={true}
-                                video={true}
-                                audio={microphone.hasPermission}
-                                enableLocation={location.hasPermission}
-                                frameProcessor={frameProcessor}
-                            />
-                        </TapGestureHandler>
-                    </Reanimated.View>
-                </PinchGestureHandler>
+                <>
+                    <PinchGestureHandler onGestureEvent={onPinchGesture} enabled={isActive}>
+                        <Reanimated.View onTouchEnd={onFocusTap} style={StyleSheet.absoluteFill}>
+                            <TapGestureHandler onEnded={onDoubleTap} numberOfTaps={2}>
+                                <ReanimatedCamera
+                                    style={StyleSheet.absoluteFill}
+                                    device={device}
+                                    isActive={isActive}
+                                    ref={camera}
+                                    onInitialized={onInitialized}
+                                    onError={onError}
+                                    onStarted={() => console.log('Camera started!')}
+                                    onStopped={() => console.log('Camera stopped!')}
+                                    onPreviewStarted={() => console.log('Preview started!')}
+                                    onPreviewStopped={() => console.log('Preview stopped!')}
+                                    onOutputOrientationChanged={(o) => console.log(`Output orientation changed to ${o}!`)}
+                                    onPreviewOrientationChanged={(o) => console.log(`Preview orientation changed to ${o}!`)}
+                                    onUIRotationChanged={(degrees) => console.log(`UI Rotation changed: ${degrees}°`)}
+                                    format={format}
+                                    fps={fps}
+                                    photoHdr={photoHdr}
+                                    videoHdr={videoHdr}
+                                    photoQualityBalance="quality"
+                                    lowLightBoost={device.supportsLowLightBoost && enableNightMode}
+                                    enableZoomGesture={false}
+                                    animatedProps={cameraAnimatedProps}
+                                    exposure={0}
+                                    enableFpsGraph={true}
+                                    outputOrientation="device"
+                                    photo={true}
+                                    video={true}
+                                    audio={microphone.hasPermission}
+                                    enableLocation={location.hasPermission}
+                                    frameProcessor={frameProcessor}
+                                />
+                            </TapGestureHandler>
+                        </Reanimated.View>
+                    </PinchGestureHandler>
+                </>
             ) : (
                 <View style={styles.emptyContainer}>
                     <Text style={styles.text}>Your phone does not have a Camera.</Text>
                 </View>
             )}
+
+            {
+                faces.length > 0 &&
+                <FaceBoundingBox faces={faces} />
+                // <Text style={{
+                //     position: "absolute",
+                //     top: 50,
+                //     left: 50,
+                // }}>Hello {faces[0]?.bounds?.top ? faces[0]?.bounds?.top : "haha"}</Text>
+            }
 
             <CaptureButton
                 style={styles.captureButton}
