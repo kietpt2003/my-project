@@ -1,4 +1,5 @@
 import { Frame, FrameProcessorPlugin } from "react-native-vision-camera";
+import { Face } from "react-native-vision-camera-face-detector";
 
 //the value is in percentage
 export interface CropRegion {
@@ -17,12 +18,32 @@ export interface FacialConfig {
 export interface FaceBoundingBox {
     left: number;
     top: number;
-    width: number;
-    height: number;
+    right: number;
+    bottom: number;
+}
+
+export interface PointData {
+    x: number;
+    y: number;
+}
+
+export interface ContourData {
+    faceContourType: number;
+    points: PointData[];
+}
+
+export interface LandmarkData {
+    ladmarkType: number;
+    positionX: number;
+    positionY: number;
 }
 
 export interface FacialRecognitionResult {
     faces: FaceData[];
+}
+
+export interface FacialRecognitionResultV2 {
+    faces: Face[];
 }
 
 export interface FaceData {
@@ -30,6 +51,13 @@ export interface FaceData {
     leftEyeOpenProbability: number;
     rightEyeOpenProbability: number;
     smilingProbability: number;
+    headEulerAngleX: number;
+    headEulerAngleY: number;
+    headEulerAngleZ: number;
+    allContours: ContourData[];
+    allLandmarks: LandmarkData[];
+    imageWidth: number;
+    imageHeight: number;
 }
 
 export function facialRecognition(frame: Frame, config?: FacialConfig, plugin?: FrameProcessorPlugin | undefined): FacialRecognitionResult {

@@ -95,11 +95,31 @@ class FacialRecognitionPlugin(
                                         "left" to face.boundingBox.left,
                                         "top" to face.boundingBox.top,
                                         "right" to face.boundingBox.right,
-                                        "bottom" to face.boundingBox.bottom
+                                        "bottom" to face.boundingBox.bottom,
                                 ),
                                 "leftEyeOpenProbability" to (face.leftEyeOpenProbability?.toDouble() ?: -1.0),
                                 "rightEyeOpenProbability" to (face.rightEyeOpenProbability?.toDouble() ?: -1.0),
-                                "smilingProbability" to (face.smilingProbability?.toDouble() ?: -1.0)
+                                "smilingProbability" to (face.smilingProbability?.toDouble() ?: -1.0),
+                                "headEulerAngleX" to face.headEulerAngleX.toDouble(),
+                                "headEulerAngleY" to face.headEulerAngleY.toDouble(),
+                                "headEulerAngleZ" to face.headEulerAngleZ.toDouble(),
+                                "allContours" to face.allContours.map { contour ->
+                                    mapOf(
+                                            "faceContourType" to contour.faceContourType.toDouble(),
+                                            "points" to contour.points.map { point ->
+                                                mapOf("x" to point.x.toDouble(), "y" to point.y.toDouble())
+                                            },
+                                    )
+                                },
+                                "allLandmarks" to face.allLandmarks.map { landmark ->
+                                    mapOf(
+                                            "landmarkType" to landmark.landmarkType.toDouble(),
+                                            "positionX" to landmark.position.x.toDouble(),
+                                            "positionY" to landmark.position.y.toDouble()
+                                    )
+                                },
+                                "imageWidth" to image.width.toDouble(),
+                                "imageHeight" to image.height.toDouble(),
                         )
                     }
                     result["faces"] = faceData

@@ -31,6 +31,7 @@ import { NativeModules } from 'react-native'
 import { FaceData, facialRecognition } from 'utils/facialRecognition'
 import FaceBoundingBox from './FaceBoundingBox'
 import { useRunOnJS, useSharedValue as useSharedValueWL, Worklets } from 'react-native-worklets-core'
+import { Face, FaceDetectionOptions, useFaceDetector } from 'react-native-vision-camera-face-detector'
 
 const { FacialRecognition } = NativeModules // Import the native module
 
@@ -149,6 +150,9 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
     //#region Effects
     useEffect(() => {
         // Reset zoom to it's default everytime the `device` changes.
+        console.log("screenWidth", SCREEN_WIDTH)
+        console.log("screenHeight", SCREEN_HEIGHT);
+
         zoom.value = device?.neutralZoom ?? 1
     }, [zoom, device])
     //#endregion
@@ -181,32 +185,50 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
         location.requestPermission()
     }, [location])
 
-    const facesSharedValue = useSharedValueWL<FaceData[]>([]);
-    const [faces, setFaces] = useState<FaceData[]>([]);
-
-    // Cập nhật UI khi facesSharedValue thay đổi
-    // useEffect(() => {
-    //     const updateFaces = () => {
-    //         Worklets.runOnJS(() => {
-    //             setFaces(facesSharedValue.value)
-    //         });
-    //     };
-    //     updateFaces();
-    // }, [facesSharedValue.value]);
+    const [faces, setFaces] = useState<Face[]>([]);
 
     const updateResults = useRunOnJS((results) => {
         setFaces(results);
     }, []);
 
+    const faceDetectionOptions = useRef<FaceDetectionOptions>({
+        // detection options
+        windowHeight: SCREEN_HEIGHT,
+        windowWidth: SCREEN_WIDTH,
+        cameraFacing: "front", //Camera front/back
+        performanceMode: "accurate",
+        classificationMode: "all", //smilingProbability, leftEyeOpenProbability, etc
+        contourMode: "all", //FACE, LEFT_EYEBROW_TOP, UPPER_LIP_TOP, LOWER_LIP_TOP, etc
+        landmarkMode: "all", //LEFT_CHEEK, LEFT_EYE, MOUTH_LEFT, etc
+    }).current
+
+    const { detectFaces } = useFaceDetector(faceDetectionOptions)
+
+    const handleDetectedFaces = Worklets.createRunOnJS((
+        faces: Face[]
+    ) => {
+        // console.log('faces detected', faces)
+        setFaces(faces);
+    })
+
     const plugin = VisionCameraProxy.initFrameProcessorPlugin('facial-recognition', {});
     const frameProcessor = useFrameProcessor((frame) => {
         'worklet'
 
-        runAtTargetFps(10, () => {
+        runAtTargetFps(5, () => {
             try {
-                const result = facialRecognition(frame, undefined, plugin);
-                console.log('Facial Recognition Result:', result.faces.length);
-                updateResults(result.faces);
+                // const result = facialRecognition(frame, undefined, plugin);
+                // console.log('Facial Recognition Result:', result.faces.length);
+                // if (result.faces.length > 0) {
+                //     console.log('check:', result.faces[0]);
+                // }
+                // updateResults(result.faces);
+                console.log('Frame:', frame.width, frame.height);
+
+                const faces = detectFaces(frame);
+                // ... chain some asynchronous frame processor
+                // ... do something asynchronously with frame
+                handleDetectedFaces(faces)
             } catch (error) {
                 console.error('Facial Recognition Error:', error);
             }
