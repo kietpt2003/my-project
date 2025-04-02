@@ -223,7 +223,8 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
                 //     console.log('check:', result.faces[0]);
                 // }
                 // updateResults(result.faces);
-                console.log('Frame:', frame.width, frame.height);
+
+                console.log('Frame:', frame.isMirrored);
 
                 const faces = detectFaces(frame);
                 // ... chain some asynchronous frame processor
