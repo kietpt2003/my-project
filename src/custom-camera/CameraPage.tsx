@@ -12,11 +12,12 @@ import {
     useFrameProcessor,
     useLocationPermission,
     useMicrophonePermission,
+    useSkiaFrameProcessor,
     VisionCameraProxy,
 } from 'react-native-vision-camera'
 import { Camera } from 'react-native-vision-camera'
 import { CONTENT_SPACING, CONTROL_BUTTON_SIZE, MAX_ZOOM_FACTOR, SAFE_AREA_PADDING, SCREEN_HEIGHT, SCREEN_WIDTH } from 'constant'
-import Reanimated, { Extrapolate, interpolate, runOnJS, useAnimatedGestureHandler, useAnimatedProps, useSharedValue } from 'react-native-reanimated'
+import Reanimated, { Extrapolate, interpolate, useAnimatedGestureHandler, useAnimatedProps, useSharedValue } from 'react-native-reanimated'
 import { useEffect } from 'react'
 import { useIsForeground } from '../hooks/useIsForeground'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
@@ -32,6 +33,7 @@ import { FaceData, facialRecognition } from 'utils/facialRecognition'
 import FaceBoundingBox from './FaceBoundingBox'
 import { useRunOnJS, useSharedValue as useSharedValueWL, Worklets } from 'react-native-worklets-core'
 import { Face, FaceDetectionOptions, useFaceDetector } from 'react-native-vision-camera-face-detector'
+import { PaintStyle, Skia } from '@shopify/react-native-skia'
 
 const { FacialRecognition } = NativeModules // Import the native module
 
@@ -150,9 +152,6 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
     //#region Effects
     useEffect(() => {
         // Reset zoom to it's default everytime the `device` changes.
-        console.log("screenWidth", SCREEN_WIDTH)
-        console.log("screenHeight", SCREEN_HEIGHT);
-
         zoom.value = device?.neutralZoom ?? 1
     }, [zoom, device])
     //#endregion
@@ -193,8 +192,6 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
 
     const faceDetectionOptions = useRef<FaceDetectionOptions>({
         // detection options
-        windowHeight: SCREEN_HEIGHT,
-        windowWidth: SCREEN_WIDTH,
         cameraFacing: "front", //Camera front/back
         performanceMode: "accurate",
         classificationMode: "all", //smilingProbability, leftEyeOpenProbability, etc
@@ -224,8 +221,6 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
                 // }
                 // updateResults(result.faces);
 
-                console.log('Frame:', frame.isMirrored);
-
                 const faces = detectFaces(frame);
                 // ... chain some asynchronous frame processor
                 // ... do something asynchronously with frame
@@ -235,6 +230,29 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
             }
         })
     }, [])
+
+    // const frameProcessorV2 = useSkiaFrameProcessor((frame) => {
+    //     'worklet'
+    //     const faces = detectFaces(frame);
+    //     frame.render();
+
+
+
+    //     for (const face of faces) {
+    //         if (face?.bounds) {
+    //             console.log(face.bounds);
+
+    //             const { x, y, width, height } = face.bounds;
+
+
+    //             const paint = Skia.Paint();
+    //             paint.setColor(Skia.Color('red'));
+    //             paint.setStyle(PaintStyle.Stroke);
+    //             frame.drawRect(face.bounds, paint);
+    //         }
+    //     }
+
+    // }, []);
 
     const videoHdr = format?.supportsVideoHdr && enableHdr
     const photoHdr = format?.supportsPhotoHdr && enableHdr && !videoHdr
@@ -276,6 +294,7 @@ export default function CameraPage({ navigation }: Props): React.ReactElement {
                                     audio={microphone.hasPermission}
                                     enableLocation={location.hasPermission}
                                     frameProcessor={frameProcessor}
+                                    resizeMode={"contain"}
                                 />
                             </TapGestureHandler>
                         </Reanimated.View>

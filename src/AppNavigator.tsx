@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Routes } from 'tabs/routes'
-import { CameraPage, PermissionsPagecamera, CodeScannerPage } from './custom-camera/index'
+import { CameraPage, PermissionsPagecamera, CodeScannerPage, MediaPage } from './custom-camera/index'
 import { Camera } from 'react-native-vision-camera'
 
 const Stack = createNativeStackNavigator<Routes>()
@@ -28,6 +28,7 @@ export default function AppNavigator() {
                     <Stack.Screen name="PermissionsPage" component={PermissionsPagecamera} />
                     <Stack.Screen name="CameraPage" component={CameraPage} />
                     <Stack.Screen name="CodeScannerPage" component={CodeScannerPage} />
+                    <Stack.Screen name="MediaPage" component={MediaPage} />
                 </Stack.Navigator>
             </GestureHandlerRootView>
         </NavigationContainer>

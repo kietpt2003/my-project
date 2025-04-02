@@ -35,6 +35,7 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                             {/* Vẽ bounding box */}
                             <Rect
                                 x={correctedX}
+                                // x={x / phoneScale}
                                 // y={correctedY}
                                 y={y / phoneScale}
                                 width={width / phoneScale}
@@ -46,25 +47,25 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                             />
 
                             {/* Vẽ contours */}
-                            {
+                            {/* {
                                 face.contours?.FACE && face.contours?.FACE.map((point, index) => {
-                                    if (index > 17) {
+                                    if (index > 17) { //Trái
                                         return (
                                             <Circle
                                                 key={index}
-                                                cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                                // cx={point.x / phoneScale}
+                                                // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                                cx={point.x / phoneScale}
                                                 cy={point.y / phoneScale}
                                                 r="2"
                                                 fill="white"
                                             />
                                         );
-                                    } else {
+                                    } else { //Phải
                                         return (
                                             <Circle
                                                 key={index}
-                                                cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                                // cx={point.x / phoneScale}
+                                                // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                                cx={point.x / phoneScale}
                                                 cy={point.y / phoneScale}
                                                 r="2"
                                                 fill="blue"
@@ -72,19 +73,83 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                                         )
                                     }
                                 })
-                            }
+                            } */}
                             {
-                                face.contours?.LEFT_EYE && face.contours?.LEFT_EYE.map((point, index) => {
-                                    const handledLeftEyeCoord = handleCoordinate(point.x, SCREEN_WIDTH);
-                                    const fixedXCoord = imageWidthScaled - handledLeftEyeCoord;
+                                face.contours?.FACE && face.contours?.FACE.map((point, index) => (
+                                    <Circle
+                                        key={index}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                        cy={point.y / phoneScale}
+                                        r="2"
+                                        fill="white"
+                                    />
+                                ))
+                            }
+
+                            {/* LEFT_EYEBROWk */}
+                            {
+                                face.contours?.LEFT_EYEBROW_BOTTOM && face.contours?.LEFT_EYEBROW_BOTTOM.map((point, index) => {
+                                    const handledLeftEyeBrowBotCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = correctedX + imageWidthScaled - handledLeftEyeBrowBotCoord;
+                                    const fixedXCoord = correctedX + tempCoord;
                                     return (
                                         <Circle
                                             key={index}
-                                            // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                            cx={-fixedXCoord}
+                                            cx={fixedXCoord}
                                             cy={point.y / phoneScale}
                                             r="2"
-                                            fill="green"
+                                            fill="orange"
+                                        />
+                                    )
+                                })
+                            }
+                            {
+                                face.contours?.LEFT_EYEBROW_TOP && face.contours?.LEFT_EYEBROW_TOP.map((point, index) => {
+                                    const handledLeftEyeBrowTopCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = correctedX + imageWidthScaled - handledLeftEyeBrowTopCoord;
+                                    const fixedXCoord = correctedX + tempCoord;
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={fixedXCoord}
+                                            cy={point.y / phoneScale}
+                                            r="2"
+                                            fill="orange"
+                                        />
+                                    )
+                                })
+                            }
+
+                            {
+                                face.contours?.LEFT_EYE && face.contours?.LEFT_EYE.map((point, index) => {
+                                    const handledLeftEyeCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = correctedX + imageWidthScaled - handledLeftEyeCoord;
+                                    const fixedXCoord = correctedX + tempCoord;
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={fixedXCoord}
+                                            cy={point.y / phoneScale}
+                                            r="2"
+                                            fill="orange"
+                                        />
+                                    )
+                                })
+                            }
+
+                            {/* LEFT_CHEEK */}
+                            {
+                                face.contours?.LEFT_CHEEK && face.contours?.LEFT_CHEEK.map((point, index) => {
+                                    const handledLeftCheekCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = correctedX + imageWidthScaled - handledLeftCheekCoord;
+                                    const fixedXCoord = correctedX + tempCoord;
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={fixedXCoord}
+                                            cy={point.y / phoneScale}
+                                            r="2"
+                                            fill="yellow"
                                         />
                                     )
                                 })
@@ -93,167 +158,134 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                                 face.contours?.RIGHT_EYE && face.contours?.RIGHT_EYE.map((point, index) => {
                                     const handledRightEyeCoord = handleCoordinate(point.x, SCREEN_WIDTH);
                                     const tempCoord = handledRightEyeCoord - correctedX;
-                                    const fixedXCoord = imageWidthScaled + correctedX - handledRightEyeCoord;
+                                    const fixedXCoord = imageWidthScaled + correctedX - tempCoord;
                                     return (
                                         <Circle
                                             key={index}
-                                            // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                            cx={-fixedXCoord}
+                                            cx={fixedXCoord}
                                             cy={point.y / phoneScale}
                                             r="2"
-                                            fill="white"
+                                            fill="pink"
                                         />
                                     )
                                 })
                             }
                             {
-                                face.contours?.LEFT_EYEBROW_BOTTOM && face.contours?.LEFT_EYEBROW_BOTTOM.map((point, index) => (
-                                    <Circle
-                                        key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
-                                        cy={point.y / phoneScale}
-                                        r="2"
-                                        fill="orange"
-                                    />))
+                                face.contours?.RIGHT_EYEBROW_BOTTOM && face.contours?.RIGHT_EYEBROW_BOTTOM.map((point, index) => {
+                                    const handledRightEyeBrowBotCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = handledRightEyeBrowBotCoord - correctedX;
+                                    const fixedXCoord = imageWidthScaled + correctedX - tempCoord;
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={fixedXCoord}
+                                            cy={point.y / phoneScale}
+                                            r="2"
+                                            fill="pink"
+                                        />
+                                    )
+                                })
                             }
                             {
-                                face.contours?.RIGHT_EYEBROW_BOTTOM && face.contours?.RIGHT_EYEBROW_BOTTOM.map((point, index) => (
-                                    <Circle
-                                        key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
-                                        cy={point.y / phoneScale}
-                                        r="2"
-                                        fill="purple"
-                                    />))
+                                face.contours?.RIGHT_EYEBROW_TOP && face.contours?.RIGHT_EYEBROW_TOP.map((point, index) => {
+                                    const handledRightEyeBrowTopCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = handledRightEyeBrowTopCoord - correctedX;
+                                    const fixedXCoord = imageWidthScaled + correctedX - tempCoord;
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={fixedXCoord}
+                                            cy={point.y / phoneScale}
+                                            r="2"
+                                            fill="pink"
+                                        />
+                                    )
+                                })
                             }
                             {
-                                face.contours?.LEFT_EYEBROW_TOP && face.contours?.LEFT_EYEBROW_TOP.map((point, index) => (
-                                    <Circle
-                                        key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
-                                        cy={point.y / phoneScale}
-                                        r="2"
-                                        fill="red"
-                                    />))
+                                face.contours?.RIGHT_CHEEK && face.contours?.RIGHT_CHEEK.map((point, index) => {
+                                    const handledRightEyeCheekCoord = handleCoordinate(point.x, SCREEN_WIDTH);
+                                    const tempCoord = handledRightEyeCheekCoord - correctedX;
+                                    const fixedXCoord = imageWidthScaled + correctedX - tempCoord;
+                                    return (
+                                        <Circle
+                                            key={index}
+                                            cx={fixedXCoord}
+                                            cy={point.y / phoneScale}
+                                            r="2"
+                                            fill="green"
+                                        />
+                                    )
+                                })
                             }
                             {
-                                face.contours?.RIGHT_EYEBROW_TOP && face.contours?.RIGHT_EYEBROW_TOP.map((point, index) => (
+                                face.contours?.NOSE_BRIDGE && face.contours?.NOSE_BRIDGE.map((point, index) => (
                                     <Circle
                                         key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
                                         cy={point.y / phoneScale}
                                         r="2"
-                                        fill="green"
-                                    />))
-                            }
-                            {
-                                face.contours?.LOWER_LIP_BOTTOM && face.contours?.LOWER_LIP_BOTTOM.map((point, index) => (
-                                    <Circle
-                                        key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
-                                        cy={point.y / phoneScale}
-                                        r="2"
-                                        fill="blue"
-                                    />))
-                            }
-                            {
-                                face.contours?.LOWER_LIP_TOP && face.contours?.LOWER_LIP_TOP.map((point, index) => (
-                                    <Circle
-                                        key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
-                                        cy={point.y / phoneScale}
-                                        r="2"
-                                        fill="blue"
+                                        fill="cyan"
                                     />))
                             }
                             {
                                 face.contours?.NOSE_BOTTOM && face.contours?.NOSE_BOTTOM.map((point, index) => (
                                     <Circle
                                         key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                        // cx={point.x / phoneScale}
                                         cy={point.y / phoneScale}
                                         r="2"
-                                        fill="green"
+                                        fill="cyan"
                                     />))
                             }
                             {
-                                face.contours?.NOSE_BRIDGE && face.contours?.NOSE_BRIDGE.map((point, index) => (
+                                face.contours?.LOWER_LIP_BOTTOM && face.contours?.LOWER_LIP_BOTTOM.map((point, index) => (
                                     <Circle
                                         key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                        // cx={point.x / phoneScale}
                                         cy={point.y / phoneScale}
                                         r="2"
-                                        fill="purple"
+                                        fill="brown"
                                     />))
                             }
                             {
-                                face.contours?.RIGHT_CHEEK && face.contours?.RIGHT_CHEEK.map((point, index) => (
+                                face.contours?.LOWER_LIP_TOP && face.contours?.LOWER_LIP_TOP.map((point, index) => (
                                     <Circle
                                         key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                        // cx={point.x / phoneScale}
                                         cy={point.y / phoneScale}
                                         r="2"
-                                        fill="purple"
-                                    />))
-                            }
-                            {
-                                face.contours?.LEFT_CHEEK && face.contours?.LEFT_CHEEK.map((point, index) => (
-                                    <Circle
-                                        key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
-                                        cy={point.y / phoneScale}
-                                        r="2"
-                                        fill="purple"
+                                        fill="brown"
                                     />))
                             }
                             {
                                 face.contours?.UPPER_LIP_BOTTOM && face.contours?.UPPER_LIP_BOTTOM.map((point, index) => (
                                     <Circle
                                         key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                        // cx={point.x / phoneScale}
                                         cy={point.y / phoneScale}
                                         r="2"
-                                        fill="red"
+                                        fill="brown"
                                     />))
                             }
                             {
                                 face.contours?.UPPER_LIP_TOP && face.contours?.UPPER_LIP_TOP.map((point, index) => (
                                     <Circle
                                         key={index}
-                                        // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                        cx={point.x / phoneScale}
+                                        cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                        // cx={point.x / phoneScale}
                                         cy={point.y / phoneScale}
                                         r="2"
-                                        fill="pink"
+                                        fill="brown"
                                     />))
                             }
-
                         </>
                     );
                 })}
-                <Circle
-                    cx={10}
-                    cy={10}
-                    r="4"
-                    fill="green"
-                />
-                <Circle
-                    cx={210}
-                    cy={10}
-                    r="4"
-                    fill="green"
-                />
             </Svg>
 
         </View>
