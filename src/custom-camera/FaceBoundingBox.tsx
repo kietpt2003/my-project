@@ -28,7 +28,7 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                     const imageWidthScaled = width / phoneScale;
                     const correctedX = SCREEN_WIDTH - (x / phoneScale) - imageWidthScaled;
                     const correctedY = SCREEN_HEIGHT - (y / phoneScale) - (height / phoneScale);
-                    console.log("Face", x, y,);
+                    console.log("Face", face.yawAngle);
 
                     return (
                         <>
@@ -47,14 +47,14 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                             />
 
                             {/* Vẽ contours */}
-                            {/* {
+                            {
                                 face.contours?.FACE && face.contours?.FACE.map((point, index) => {
                                     if (index > 17) { //Trái
                                         return (
                                             <Circle
                                                 key={index}
-                                                // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                                cx={point.x / phoneScale}
+                                                cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                                // cx={point.x / phoneScale}
                                                 cy={point.y / phoneScale}
                                                 r="2"
                                                 fill="white"
@@ -64,8 +64,8 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                                         return (
                                             <Circle
                                                 key={index}
-                                                // cx={handleCoordinate(point.x, SCREEN_WIDTH)}
-                                                cx={point.x / phoneScale}
+                                                cx={handleCoordinate(point.x, SCREEN_WIDTH)}
+                                                // cx={point.x / phoneScale}
                                                 cy={point.y / phoneScale}
                                                 r="2"
                                                 fill="blue"
@@ -73,8 +73,8 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                                         )
                                     }
                                 })
-                            } */}
-                            {
+                            }
+                            {/* {
                                 face.contours?.FACE && face.contours?.FACE.map((point, index) => (
                                     <Circle
                                         key={index}
@@ -84,7 +84,7 @@ const FaceBoundingBox: React.FC<FacialRecognitionResultV2> = ({ faces }) => {
                                         fill="white"
                                     />
                                 ))
-                            }
+                            } */}
 
                             {/* LEFT_EYEBROWk */}
                             {
