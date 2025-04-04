@@ -1,14 +1,14 @@
 export default {
-    camera: "TAB.Camera"
-}
+  camera: 'TAB.Camera',
+};
 
 export type Routes = {
-    PermissionsPage: undefined
-    CameraPage: undefined
-    CodeScannerPage: undefined
-    MediaPage: {
-        path: string
-        type: 'video' | 'photo'
-    }
-    Devices: undefined
-}
+  PermissionsPage: undefined;
+  CameraPage: undefined;
+  CodeScannerPage: undefined;
+  MediaPage: {
+    path: string;
+    type: 'video' | 'photo';
+  };
+  Devices: undefined;
+};

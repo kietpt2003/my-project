@@ -1,24 +1,25 @@
+/* eslint-disable prettier/prettier */
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
     [
       'react-native-reanimated/plugin',
       {
-        processNestedWorklets: true
-      }
+        processNestedWorklets: true,
+      },
     ],
     ['react-native-worklets-core/plugin'],
     [
       'module-resolver',
       {
-        'root': ["./src"],
-        'extensions': [".js", ".ios.js", ".android.js"],
+        'root': ['./src'],
+        'extensions': ['.js', '.ios.js', '.android.js'],
         'alias': {
-          'constant': "./src/constants",
-          'layout': "./src/views/Layout",
-          'utils': "./src/utils"
-        }
-      }
-    ]
+          'constant': './src/constants',
+          'layout': './src/views/Layout',
+          'utils': './src/utils',
+        },
+      },
+    ],
   ],
 };
