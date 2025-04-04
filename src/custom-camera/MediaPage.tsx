@@ -88,7 +88,7 @@ export function MediaPage({ navigation, route }: Props): React.ReactElement {
         );
         return;
       }
-      await CameraRoll.save(`file://${path}`, {
+      await CameraRoll.saveAsset(`file://${path}`, {
         type: type,
       });
       setSavingState('saved');

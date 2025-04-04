@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +15,8 @@ import {
 import {
   CameraRuntimeError,
   Frame,
+  PhotoFile,
+  VideoFile,
   Camera as VisionCamera,
   runAtTargetFps,
   useCameraDevice,
@@ -26,8 +34,9 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from 'constant';
-import { SvgOverlay } from '../custom-camera/index';
+import { Colors, SCREEN_HEIGHT, SCREEN_WIDTH } from 'constant';
+import { SvgOverlay, SvgOverlayV2 } from '../custom-camera/index';
+import { objectFacesParse, width } from 'utils';
 
 const cameraFacing = 'front';
 
@@ -50,43 +59,17 @@ export default function CameraPageV2(): JSX.Element {
   const isFocused = useIsFocused();
   const isCameraActive = !cameraPaused && isFocused;
   const cameraDevice = useCameraDevice(cameraFacing);
-  //
-  // vision camera ref
-  //
+  const flash = useSharedValue<'off' | 'auto' | 'on' | undefined>('off');
   const camera = useRef<VisionCamera>(null);
-  //
-  // face rectangle position
-  //
-  const aFaceW = useSharedValue(0);
-  const aFaceH = useSharedValue(0);
-  const aFaceX = useSharedValue(0);
-  const aFaceY = useSharedValue(0);
   const aRot = useSharedValue(0);
-  const boundingBoxStyle = useAnimatedStyle(() => ({
-    position: 'absolute',
-    borderWidth: 4,
-    borderLeftColor: 'rgb(0,255,0)',
-    borderRightColor: 'rgb(0,255,0)',
-    borderBottomColor: 'rgb(0,255,0)',
-    borderTopColor: 'rgb(255,0,0)',
-    width: withTiming(aFaceW.value, {
-      duration: 100,
-    }),
-    height: withTiming(aFaceH.value, {
-      duration: 100,
-    }),
-    left: withTiming(aFaceX.value, {
-      duration: 100,
-    }),
-    top: withTiming(aFaceY.value, {
-      duration: 100,
-    }),
-    transform: [
-      {
-        rotate: `${aRot.value}deg`,
-      },
-    ],
-  }));
+
+  const circleCenterX = useRef(width / 2);
+  const circleCenterY = useRef(height / 2.5);
+  const initFaceCenter = useSharedValue<Face | null>(null);
+  const leftFace = useSharedValue<Face | null>(null);
+  const rightFace = useSharedValue<Face | null>(null);
+  const upperFace = useSharedValue<Face | null>(null);
+  const bottomFace = useSharedValue<Face | null>(null);
 
   useEffect(() => {
     if (hasPermission) {
@@ -119,24 +102,107 @@ export default function CameraPageV2(): JSX.Element {
     setIsCameraInitialized(true);
   }, []);
 
+  const aFaceYaw = useSharedValue(0);
+  const aFacePitch = useSharedValue(0);
+  const aFaceRoll = useSharedValue(0);
+
+  const [faceMsgWarning, setFaceMsgWarning] = useState('');
+
   function handleFacesDetected(faces: Face[], frame: Frame): void {
     // if no faces are detected we do nothing
     if (Object.keys(faces).length <= 0) {
-      aFaceW.value = 0;
-      aFaceH.value = 0;
-      aFaceX.value = 0;
-      aFaceY.value = 0;
+      initFaceCenter.value = null;
+      leftFace.value = null;
+      rightFace.value = null;
+      upperFace.value = null;
+      bottomFace.value = null;
       return;
     }
 
-    const { bounds } = faces[0];
+    const { bounds, rollAngle, yawAngle, pitchAngle } = faces[0];
     const { width, height, x, y } = bounds;
-    // aFaceW.value = width;
-    // aFaceH.value = height;
-    // aFaceX.value = x;
-    // aFaceY.value = y;
+    const centerBoundX = x + width / 2;
+    const centerBoundY = y + height / 2;
+    const allowableX = Math.abs(centerBoundX - circleCenterX.current);
+    const allowableY = Math.abs(centerBoundY - circleCenterY.current);
+    const facesParse = objectFacesParse(faces);
 
-    // console.log("check", faces[0]);
+    // Warning user to position their face
+    if (initFaceCenter.value == null && faceMsgWarning.length == 0) {
+      setFaceMsgWarning('Position your face within the frame.');
+    }
+
+    if (initFaceCenter.value != null) {
+      setFaceMsgWarning('Move your head slowly to complete the circle.');
+    }
+
+    // Initialize center face
+    if (
+      allowableX >= 0 &&
+      allowableX <= 30 &&
+      allowableY >= 0 &&
+      allowableY <= 40
+    ) {
+      // Should be looking straight foward
+      if (
+        rollAngle >= -5 &&
+        rollAngle <= 5 &&
+        pitchAngle >= -5 &&
+        pitchAngle <= 30 &&
+        yawAngle >= -5 &&
+        yawAngle <= 5
+      ) {
+        initFaceCenter.value = facesParse[0];
+      }
+
+      // Left face processor
+      if (
+        initFaceCenter.value != null &&
+        yawAngle >= 10 &&
+        yawAngle <= 60 &&
+        pitchAngle >= -5 &&
+        pitchAngle <= 25
+      ) {
+        leftFace.value = facesParse[0];
+      }
+
+      // Right face processor
+      if (
+        initFaceCenter.value != null &&
+        yawAngle >= -60 &&
+        yawAngle <= -20 &&
+        pitchAngle >= -5 &&
+        pitchAngle <= 25
+      ) {
+        rightFace.value = facesParse[0];
+      }
+
+      // Upper face processor
+      if (
+        initFaceCenter.value != null &&
+        pitchAngle >= 20 &&
+        pitchAngle <= 60 &&
+        yawAngle >= -15 &&
+        yawAngle <= 15 &&
+        rollAngle >= -15 &&
+        rollAngle <= 15
+      ) {
+        upperFace.value = facesParse[0];
+      }
+
+      // Bottom face processor
+      if (
+        initFaceCenter.value != null &&
+        pitchAngle >= -30 &&
+        pitchAngle <= -10 &&
+        yawAngle >= -15 &&
+        yawAngle <= 15 &&
+        rollAngle >= -15 &&
+        rollAngle <= 15
+      ) {
+        bottomFace.value = facesParse[0];
+      }
+    }
 
     // only call camera methods if ref is defined
     if (camera.current) {
@@ -144,316 +210,37 @@ export default function CameraPageV2(): JSX.Element {
     }
   }
 
-  const [faces, setFaces] = useState<Face[]>([]);
-  function handleFacesDetectedV2(faces: Face[], frame: Frame) {
-    if (Object.keys(faces).length <= 0) {
-      // facesData.value = [];
-      return;
-    }
-
-    runAtTargetFps(10, () => {
-      console.log('checkV2', faces);
-
-      try {
-        const detectedFaces = Object.keys(faces).map(key => {
-          const face = faces[parseInt(key)];
-
-          // Contours FACE
-          const FACE = face.contours
-            ? Object.keys(face.contours.FACE).map(k => {
-                const data = face.contours!.FACE[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours LEFT_EYEBROW_TOP
-          const LEFT_EYEBROW_TOP = face.contours
-            ? Object.keys(face.contours.LEFT_EYEBROW_TOP).map(k => {
-                const data = face.contours!.LEFT_EYEBROW_TOP[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours LEFT_EYEBROW_BOTTOM
-          const LEFT_EYEBROW_BOTTOM = face.contours
-            ? Object.keys(face.contours.LEFT_EYEBROW_BOTTOM).map(k => {
-                const data = face.contours!.LEFT_EYEBROW_BOTTOM[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours RIGHT_EYEBROW_TOP
-          const RIGHT_EYEBROW_TOP = face.contours
-            ? Object.keys(face.contours.RIGHT_EYEBROW_TOP).map(k => {
-                const data = face.contours!.RIGHT_EYEBROW_TOP[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours RIGHT_EYEBROW_BOTTOM
-          const RIGHT_EYEBROW_BOTTOM = face.contours
-            ? Object.keys(face.contours.RIGHT_EYEBROW_BOTTOM).map(k => {
-                const data = face.contours!.RIGHT_EYEBROW_BOTTOM[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours LEFT_EYE
-          const LEFT_EYE = face.contours
-            ? Object.keys(face.contours.LEFT_EYE).map(k => {
-                const data = face.contours!.LEFT_EYE[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours RIGHT_EYE
-          const RIGHT_EYE = face.contours
-            ? Object.keys(face.contours.RIGHT_EYE).map(k => {
-                const data = face.contours!.RIGHT_EYE[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours UPPER_LIP_TOP
-          const UPPER_LIP_TOP = face.contours
-            ? Object.keys(face.contours.UPPER_LIP_TOP).map(k => {
-                const data = face.contours!.UPPER_LIP_TOP[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours UPPER_LIP_BOTTOM
-          const UPPER_LIP_BOTTOM = face.contours
-            ? Object.keys(face.contours.UPPER_LIP_BOTTOM).map(k => {
-                const data = face.contours!.UPPER_LIP_BOTTOM[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours LOWER_LIP_TOP
-          const LOWER_LIP_TOP = face.contours
-            ? Object.keys(face.contours.LOWER_LIP_TOP).map(k => {
-                const data = face.contours!.LOWER_LIP_TOP[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours LOWER_LIP_BOTTOM
-          const LOWER_LIP_BOTTOM = face.contours
-            ? Object.keys(face.contours.LOWER_LIP_BOTTOM).map(k => {
-                const data = face.contours!.LOWER_LIP_BOTTOM[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours NOSE_BRIDGE
-          const NOSE_BRIDGE = face.contours
-            ? Object.keys(face.contours.NOSE_BRIDGE).map(k => {
-                const data = face.contours!.NOSE_BRIDGE[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours NOSE_BOTTOM
-          const NOSE_BOTTOM = face.contours
-            ? Object.keys(face.contours.NOSE_BOTTOM).map(k => {
-                const data = face.contours!.NOSE_BOTTOM[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours LEFT_CHEEK
-          const LEFT_CHEEK = face.contours
-            ? Object.keys(face.contours.LEFT_CHEEK).map(k => {
-                const data = face.contours!.LEFT_CHEEK[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          // Contours RIGHT_CHEEK
-          const RIGHT_CHEEK = face.contours
-            ? Object.keys(face.contours.RIGHT_CHEEK).map(k => {
-                const data = face.contours!.RIGHT_CHEEK[parseInt(k)];
-                return {
-                  x: data.x,
-                  y: data.y,
-                };
-              })
-            : [];
-
-          return {
-            bounds: face.bounds,
-            contours: face.contours
-              ? {
-                  FACE,
-                  LEFT_EYEBROW_TOP,
-                  LEFT_EYEBROW_BOTTOM,
-                  RIGHT_EYEBROW_TOP,
-                  RIGHT_EYEBROW_BOTTOM,
-                  LEFT_EYE,
-                  RIGHT_EYE,
-                  UPPER_LIP_TOP,
-                  UPPER_LIP_BOTTOM,
-                  LOWER_LIP_TOP,
-                  LOWER_LIP_BOTTOM,
-                  NOSE_BRIDGE,
-                  NOSE_BOTTOM,
-                  LEFT_CHEEK,
-                  RIGHT_CHEEK,
-                }
-              : undefined,
-            landmarks: face.landmarks,
-            leftEyeOpenProbability: face.leftEyeOpenProbability,
-            pitchAngle: face.pitchAngle,
-            rightEyeOpenProbability: face.rightEyeOpenProbability,
-            rollAngle: face.rollAngle,
-            smilingProbability: face.smilingProbability,
-            yawAngle: face.yawAngle,
-          };
-        });
-
-        // console.log("check", detectedFaces.length);
-
-        // facesData.value = detectedFaces;
-        setFaces(detectedFaces);
-        // console.log("data", facesData.value.length);
-      } catch (error) {
-        console.log('hâh', error);
-      }
-    });
-  }
-
-  // function handleSkiaActions(faces: Face[], frame: DrawableFrame): void {
-  //   'worklet';
-
-  //   // if no faces are detected we do nothing
-  //   if (Object.keys(faces).length <= 0) {
-  //     return;
-  //   }
-
-  //   console.log('SKIA - faces', faces.length, 'frame', frame.toString());
-
-  //   const { bounds, contours, landmarks } = faces[0];
-
-  //   // draw a blur shape around the face points
-  //   const blurRadius = 25;
-  //   const blurFilter = Skia.ImageFilter.MakeBlur(
-  //     blurRadius,
-  //     blurRadius,
-  //     TileMode.Repeat,
-  //     null,
-  //   );
-  //   const blurPaint = Skia.Paint();
-  //   blurPaint.setImageFilter(blurFilter);
-  //   const contourPath = Skia.Path.Make();
-  //   const necessaryContours: (keyof Contours)[] = [
-  //     'FACE',
-  //     'LEFT_CHEEK',
-  //     'RIGHT_CHEEK',
-  //   ];
-
-  //   necessaryContours.map(key => {
-  //     contours?.[key]?.map((point, index) => {
-  //       if (index === 0) {
-  //         // it's a starting point
-  //         contourPath.moveTo(point.x, point.y);
-  //       } else {
-  //         // it's a continuation
-  //         contourPath.lineTo(point.x, point.y);
-  //       }
-  //     });
-  //     contourPath.close();
-  //   });
-
-  //   frame.save();
-  //   frame.clipPath(contourPath, ClipOp.Intersect, true);
-  //   frame.render(blurPaint);
-  //   frame.restore();
-
-  //   // draw mouth shape
-  //   const mouthPath = Skia.Path.Make();
-  //   const mouthPaint = Skia.Paint();
-  //   mouthPaint.setColor(Skia.Color('red'));
-  //   const necessaryLandmarks: (keyof Landmarks)[] = [
-  //     'MOUTH_BOTTOM',
-  //     'MOUTH_LEFT',
-  //     'MOUTH_RIGHT',
-  //   ];
-
-  //   necessaryLandmarks.map((key, index) => {
-  //     const point = landmarks?.[key];
-  //     if (!point) {
-  //       return;
-  //     }
-
-  //     if (index === 0) {
-  //       // it's a starting point
-  //       mouthPath.moveTo(point.x, point.y);
-  //     } else {
-  //       // it's a continuation
-  //       mouthPath.lineTo(point.x, point.y);
-  //     }
-  //   });
-  //   mouthPath.close();
-  //   frame.drawPath(mouthPath, mouthPaint);
-
-  //   // draw a rectangle around the face
-  //   const rectPaint = Skia.Paint();
-  //   rectPaint.setColor(Skia.Color('blue'));
-  //   rectPaint.setStyle(1);
-  //   rectPaint.setStrokeWidth(5);
-  //   frame.drawRect(bounds, rectPaint);
-  // }
-
-  const [currentPercent, setCurrentPercent] = useState(0);
+  const [currentPercent, setCurrentPercent] = useState(30);
 
   function handlePercent() {
     if (currentPercent < 100 && currentPercent >= 0) {
       setCurrentPercent(c => c + 20);
     }
   }
+
+  const onMediaCaptured = useCallback(
+    (media: PhotoFile | VideoFile, type: 'photo' | 'video') => {
+      console.log(`Media captured! ${JSON.stringify(media)}`);
+    },
+    [],
+  );
+
+  const takePhoto = useCallback(async () => {
+    try {
+      if (camera.current == null) {
+        throw new Error('Camera ref is null!');
+      }
+
+      console.log('Taking photo...');
+      const photo = await camera.current.takePhoto({
+        flash: flash.value,
+        enableShutterSound: false,
+      });
+      onMediaCaptured(photo, 'photo');
+    } catch (e) {
+      console.error('Failed to take photo!', e);
+    }
+  }, [camera, flash, onMediaCaptured]);
 
   return (
     <>
@@ -488,8 +275,6 @@ export default function CameraPageV2(): JSX.Element {
               enableFpsGraph={true}
             />
 
-            {/* <Animated.View style={boundingBoxStyle} /> */}
-
             {cameraPaused && (
               <Text
                 style={{
@@ -502,7 +287,19 @@ export default function CameraPageV2(): JSX.Element {
               </Text>
             )}
 
-            <SvgOverlay currentPercent={currentPercent} totalDuration={2000} />
+            {/* <SvgOverlay
+              currentPercent={currentPercent}
+              totalDuration={2000}
+              yawAngle={aFaceYaw}
+              pitchAngle={aFacePitch}
+              rollAngle={aFaceRoll}
+            /> */}
+            <SvgOverlayV2
+              leftFace={leftFace}
+              rightFace={rightFace}
+              upperFace={upperFace}
+              bottomFace={bottomFace}
+            />
           </>
         ) : (
           <Text
@@ -516,6 +313,14 @@ export default function CameraPageV2(): JSX.Element {
           </Text>
         )}
       </View>
+
+      {faceMsgWarning.length > 0 && (
+        <View style={styles.warningContainer}>
+          <Text style={styles.warningMsg} numberOfLines={2}>
+            {faceMsgWarning}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.controls}>
         <Button
@@ -553,5 +358,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     flexWrap: 'wrap',
     rowGap: 5,
+  },
+  warningContainer: {
+    width: width,
+    position: 'absolute',
+    bottom: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  warningMsg: {
+    fontSize: 25,
+    color: Colors.background,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

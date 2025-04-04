@@ -8,6 +8,7 @@ import FaceBoundingBoxV2 from './FaceBoundingBoxV2';
 import CameraPageV3 from './CameraPageV3';
 import FaceMask from './FaceMask';
 import SvgOverlay from './SvgOverlay';
+import SvgOverlayV2 from './SvgOverlayV2';
 
 export {
   CameraPage,
@@ -20,4 +21,5 @@ export {
   CameraPageV3,
   FaceMask,
   SvgOverlay,
+  SvgOverlayV2,
 };
