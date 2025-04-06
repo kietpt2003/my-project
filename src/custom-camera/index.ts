@@ -9,6 +9,7 @@ import CameraPageV3 from './CameraPageV3';
 import FaceMask from './FaceMask';
 import SvgOverlay from './SvgOverlay';
 import SvgOverlayV2 from './SvgOverlayV2';
+import SuccessPage from './SuccessPage';
 
 export {
   CameraPage,
@@ -22,4 +23,5 @@ export {
   FaceMask,
   SvgOverlay,
   SvgOverlayV2,
+  SuccessPage,
 };

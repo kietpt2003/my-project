@@ -12,6 +12,7 @@ import {
   MediaPage,
   CameraPageV2,
   CameraPageV3,
+  SuccessPage,
 } from './custom-camera/index';
 import { Camera } from 'react-native-vision-camera';
 
@@ -43,6 +44,7 @@ export default function AppNavigator() {
           <Stack.Screen name="CameraPage" component={CameraPageV2} />
           <Stack.Screen name="CodeScannerPage" component={CodeScannerPage} />
           <Stack.Screen name="MediaPage" component={MediaPage} />
+          <Stack.Screen name="SuccessPage" component={SuccessPage} />
         </Stack.Navigator>
       </GestureHandlerRootView>
     </NavigationContainer>

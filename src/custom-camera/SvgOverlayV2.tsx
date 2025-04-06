@@ -2,9 +2,11 @@ import { Colors } from 'constant';
 import React from 'react';
 import { View, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, {
+  Easing,
   SharedValue,
   useAnimatedProps,
   useDerivedValue,
+  withTiming,
 } from 'react-native-reanimated';
 import Svg, { Rect, Circle, Defs, Mask } from 'react-native-svg';
 import { Face } from 'react-native-vision-camera-face-detector';
@@ -14,6 +16,10 @@ export interface SvgOverlayProps {
   rightFace: SharedValue<Face | null>;
   upperFace: SharedValue<Face | null>;
   bottomFace: SharedValue<Face | null>;
+  leftFacePhoto: string;
+  rightFacePhoto: string;
+  upperFacePhoto: string;
+  bottomFacePhoto: string;
 }
 
 const AnimatedLeftCircle = Animated.createAnimatedComponent(Circle);
@@ -26,6 +32,10 @@ export default function SvgOverlayV2({
   rightFace,
   upperFace,
   bottomFace,
+  leftFacePhoto,
+  rightFacePhoto,
+  upperFacePhoto,
+  bottomFacePhoto,
 }: SvgOverlayProps) {
   const { width, height } = useWindowDimensions();
   const radius = Math.min(width, height) * 0.45; // Điều chỉnh kích thước hình tròn
@@ -35,28 +45,28 @@ export default function SvgOverlayV2({
 
   // Trả về phần trăm nếu quét được face left
   const percentRotationLeft = useDerivedValue(() => {
-    if (leftFace.value == null) {
+    if (leftFace.value == null && leftFacePhoto.length == 0) {
       return 0;
     } else {
       return 25;
     }
   });
   const percentRotationRight = useDerivedValue(() => {
-    if (rightFace.value == null) {
+    if (rightFace.value == null && rightFacePhoto.length == 0) {
       return 0;
     } else {
       return 25;
     }
   });
   const percentRotationUpper = useDerivedValue(() => {
-    if (upperFace.value == null) {
+    if (upperFace.value == null && upperFacePhoto.length == 0) {
       return 0;
     } else {
       return 25;
     }
   });
   const percentRotationBottom = useDerivedValue(() => {
-    if (bottomFace.value == null) {
+    if (bottomFace.value == null && bottomFacePhoto.length == 0) {
       return 0;
     } else {
       return 25;
@@ -93,22 +103,58 @@ export default function SvgOverlayV2({
   // Animated Props để gán vào transform và strokeDasharray
   const animatedPropsLeft = useAnimatedProps(() => {
     return {
-      strokeDasharray: [dashLeftLength.value, dashLeftGap.value], // Vẽ phần viền theo phần trăm
+      strokeDasharray: [
+        withTiming(dashLeftLength.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+        withTiming(dashLeftGap.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+      ], // Vẽ phần viền theo phần trăm
     };
   });
   const animatedPropsRight = useAnimatedProps(() => {
     return {
-      strokeDasharray: [dashRightLength.value, dashRightGap.value],
+      strokeDasharray: [
+        withTiming(dashRightLength.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+        withTiming(dashRightGap.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+      ],
     };
   });
   const animatedPropsUpper = useAnimatedProps(() => {
     return {
-      strokeDasharray: [dashUpperLength.value, dashUpperGap.value],
+      strokeDasharray: [
+        withTiming(dashUpperLength.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+        withTiming(dashUpperGap.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+      ],
     };
   });
   const animatedPropsBottom = useAnimatedProps(() => {
     return {
-      strokeDasharray: [dashBottomLength.value, dashBottomGap.value],
+      strokeDasharray: [
+        withTiming(dashBottomLength.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+        withTiming(dashBottomGap.value, {
+          duration: 200,
+          easing: Easing.linear,
+        }),
+      ],
     };
   });
 

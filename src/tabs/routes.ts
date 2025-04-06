@@ -11,4 +11,5 @@ export type Routes = {
     type: 'video' | 'photo';
   };
   Devices: undefined;
+  SuccessPage: undefined;
 };

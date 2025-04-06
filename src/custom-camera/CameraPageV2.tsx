@@ -1,16 +1,12 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
   Button,
   View,
   useWindowDimensions,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {
   CameraRuntimeError,
@@ -23,22 +19,31 @@ import {
   useCameraFormat,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import { useIsFocused } from '@react-navigation/core';
+import { useIsFocused, useNavigation } from '@react-navigation/core';
 import {
   Camera,
   Face,
   FaceDetectionOptions,
 } from 'react-native-vision-camera-face-detector';
 import Animated, {
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import RNFS from 'react-native-fs';
 import { Colors, SCREEN_HEIGHT, SCREEN_WIDTH } from 'constant';
 import { SvgOverlay, SvgOverlayV2 } from '../custom-camera/index';
-import { objectFacesParse, width } from 'utils';
+import { height, objectFacesParse, width } from 'utils';
+import {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
+import { Routes } from 'tabs/routes';
 
 const cameraFacing = 'front';
+type facePhotoPos = 'center' | 'left' | 'right' | 'upper' | 'bottom';
 
 export default function CameraPageV2(): JSX.Element {
   const [isCameraInitialized, setIsCameraInitialized] = useState(false);
@@ -63,6 +68,8 @@ export default function CameraPageV2(): JSX.Element {
   const camera = useRef<VisionCamera>(null);
   const aRot = useSharedValue(0);
 
+  const navigation = useNavigation<NativeStackNavigationProp<Routes>>();
+
   const circleCenterX = useRef(width / 2);
   const circleCenterY = useRef(height / 2.5);
   const initFaceCenter = useSharedValue<Face | null>(null);
@@ -70,6 +77,22 @@ export default function CameraPageV2(): JSX.Element {
   const rightFace = useSharedValue<Face | null>(null);
   const upperFace = useSharedValue<Face | null>(null);
   const bottomFace = useSharedValue<Face | null>(null);
+
+  const [centerFaceState, setCenterFace] = useState<Face | null>(null);
+  const [leftFaceState, setLeftFace] = useState<Face | null>(null);
+  const [rightFaceState, setRightFace] = useState<Face | null>(null);
+  const [upperFaceState, setUpperFace] = useState<Face | null>(null);
+  const [bottomFaceState, setBottomFace] = useState<Face | null>(null);
+
+  const [centerFacePhotoState, setCenterFacePhoto] = useState<string>('');
+  const [leftFacePhotoState, setLeftFacePhoto] = useState<string>('');
+  const [rightFacePhotoState, setRightFacePhoto] = useState<string>('');
+  const [upperFacePhotoState, setUpperFacePhoto] = useState<string>('');
+  const [bottomFacePhotoState, setBottomFacePhoto] = useState<string>('');
+
+  const [isFetching, setFetching] = useState<boolean>(false);
+
+  const [faceMsgWarning, setFaceMsgWarning] = useState('');
 
   useEffect(() => {
     if (hasPermission) {
@@ -102,12 +125,6 @@ export default function CameraPageV2(): JSX.Element {
     setIsCameraInitialized(true);
   }, []);
 
-  const aFaceYaw = useSharedValue(0);
-  const aFacePitch = useSharedValue(0);
-  const aFaceRoll = useSharedValue(0);
-
-  const [faceMsgWarning, setFaceMsgWarning] = useState('');
-
   function handleFacesDetected(faces: Face[], frame: Frame): void {
     // if no faces are detected we do nothing
     if (Object.keys(faces).length <= 0) {
@@ -116,6 +133,17 @@ export default function CameraPageV2(): JSX.Element {
       rightFace.value = null;
       upperFace.value = null;
       bottomFace.value = null;
+      return;
+    }
+
+    // Break after have full picture info
+    if (
+      centerFacePhotoState != '' &&
+      leftFacePhotoState != '' &&
+      rightFacePhotoState != '' &&
+      upperFacePhotoState != '' &&
+      bottomFacePhotoState != ''
+    ) {
       return;
     }
 
@@ -153,6 +181,9 @@ export default function CameraPageV2(): JSX.Element {
         yawAngle <= 5
       ) {
         initFaceCenter.value = facesParse[0];
+        if (camera.current && initFaceCenter.value == null) {
+          takePhoto('center');
+        }
       }
 
       // Left face processor
@@ -164,6 +195,9 @@ export default function CameraPageV2(): JSX.Element {
         pitchAngle <= 25
       ) {
         leftFace.value = facesParse[0];
+        if (camera.current && leftFace.value == null) {
+          takePhoto('left');
+        }
       }
 
       // Right face processor
@@ -175,6 +209,9 @@ export default function CameraPageV2(): JSX.Element {
         pitchAngle <= 25
       ) {
         rightFace.value = facesParse[0];
+        if (camera.current && rightFace.value == null) {
+          takePhoto('right');
+        }
       }
 
       // Upper face processor
@@ -188,33 +225,26 @@ export default function CameraPageV2(): JSX.Element {
         rollAngle <= 15
       ) {
         upperFace.value = facesParse[0];
+        if (camera.current && upperFace.value == null) {
+          takePhoto('upper');
+        }
       }
 
       // Bottom face processor
       if (
         initFaceCenter.value != null &&
         pitchAngle >= -30 &&
-        pitchAngle <= -10 &&
+        pitchAngle <= -8 &&
         yawAngle >= -15 &&
         yawAngle <= 15 &&
         rollAngle >= -15 &&
         rollAngle <= 15
       ) {
         bottomFace.value = facesParse[0];
+        if (camera.current && bottomFace.value == null) {
+          takePhoto('bottom');
+        }
       }
-    }
-
-    // only call camera methods if ref is defined
-    if (camera.current) {
-      // take photo, capture video, etc...
-    }
-  }
-
-  const [currentPercent, setCurrentPercent] = useState(30);
-
-  function handlePercent() {
-    if (currentPercent < 100 && currentPercent >= 0) {
-      setCurrentPercent(c => c + 20);
     }
   }
 
@@ -225,22 +255,172 @@ export default function CameraPageV2(): JSX.Element {
     [],
   );
 
-  const takePhoto = useCallback(async () => {
-    try {
-      if (camera.current == null) {
-        throw new Error('Camera ref is null!');
+  const takePhoto = useCallback(
+    async (pos: string) => {
+      try {
+        if (camera.current == null) {
+          throw new Error('Camera ref is null!');
+        }
+
+        const photo = await camera.current.takePhoto({
+          flash: flash.value,
+          enableShutterSound: false,
+        });
+
+        let photoPath = 'file://';
+        if (Platform.OS == 'android') {
+          photoPath += photo.path;
+          const base64 = await RNFS.readFile(photoPath, 'base64');
+          switch (pos) {
+            case 'center':
+              setCenterFacePhoto(base64);
+              break;
+            case 'left':
+              setLeftFacePhoto(base64);
+              break;
+            case 'right':
+              setRightFacePhoto(base64);
+              break;
+            case 'upper':
+              setUpperFacePhoto(base64);
+              break;
+            case 'bottom':
+              setBottomFacePhoto(base64);
+              break;
+            default:
+              setCenterFacePhoto('');
+              setLeftFacePhoto('');
+              setRightFacePhoto('');
+              setUpperFacePhoto('');
+              setBottomFacePhoto('');
+              break;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to take photo!', e);
+      }
+    },
+    [camera, flash, onMediaCaptured],
+  );
+
+  function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Set state shared value
+  useAnimatedReaction(
+    () => {
+      return {
+        initFaceCenter: initFaceCenter.value,
+        leftFace: leftFace.value,
+        rightFace: rightFace.value,
+        upperFace: upperFace.value,
+        bottomFace: bottomFace.value,
+      };
+    },
+    (current, previous) => {
+      if (current.initFaceCenter !== previous?.initFaceCenter) {
+        runOnJS(setCenterFace)(current.initFaceCenter);
       }
 
-      console.log('Taking photo...');
-      const photo = await camera.current.takePhoto({
-        flash: flash.value,
-        enableShutterSound: false,
-      });
-      onMediaCaptured(photo, 'photo');
-    } catch (e) {
-      console.error('Failed to take photo!', e);
+      if (current.leftFace !== previous?.leftFace) {
+        runOnJS(setLeftFace)(current.leftFace);
+      }
+
+      if (current.rightFace !== previous?.rightFace) {
+        runOnJS(setRightFace)(current.rightFace);
+      }
+
+      if (current.upperFace !== previous?.upperFace) {
+        runOnJS(setUpperFace)(current.upperFace);
+      }
+
+      if (current.bottomFace !== previous?.bottomFace) {
+        runOnJS(setBottomFace)(current.bottomFace);
+      }
+    },
+    [],
+  );
+
+  async function handleSendDataToServer(
+    centerFaceData: Face,
+    leftFaceData: Face,
+    rightFaceData: Face,
+    upperFaceData: Face,
+    bottomFaceData: Face,
+    centerPhoto: string,
+    leftPhoto: string,
+    rightPhoto: string,
+    upperPhoto: string,
+    bottomPhoto: string,
+  ) {
+    try {
+      setFetching(true);
+      await delay(2000);
+      setFetching(false);
+      navigation.replace('SuccessPage');
+    } catch (error) {
+      console.error('Send data fail');
     }
-  }, [camera, flash, onMediaCaptured]);
+  }
+
+  // Send data to server
+  useEffect(() => {
+    console.log(
+      'checl',
+      centerFaceState != null,
+      leftFaceState != null,
+      rightFaceState != null,
+      upperFaceState != null,
+      bottomFaceState != null,
+      centerFacePhotoState.length > 0,
+      leftFacePhotoState.length > 0,
+      rightFacePhotoState.length > 0,
+      upperFacePhotoState.length > 0,
+      bottomFacePhotoState.length > 0,
+    );
+
+    if (
+      centerFaceState != null &&
+      leftFaceState != null &&
+      rightFaceState != null &&
+      upperFaceState != null &&
+      bottomFaceState != null &&
+      centerFacePhotoState.length > 0 &&
+      leftFacePhotoState.length > 0 &&
+      rightFacePhotoState.length > 0 &&
+      upperFacePhotoState.length > 0 &&
+      bottomFacePhotoState.length > 0
+    ) {
+      try {
+        handleSendDataToServer(
+          centerFaceState,
+          leftFaceState,
+          rightFaceState,
+          upperFaceState,
+          bottomFaceState,
+          centerFacePhotoState,
+          leftFacePhotoState,
+          rightFacePhotoState,
+          upperFacePhotoState,
+          bottomFacePhotoState,
+        );
+      } catch (error) {
+        console.error('loi ne');
+      }
+    }
+  }, [
+    centerFaceState,
+    leftFaceState,
+    rightFaceState,
+    upperFaceState,
+    bottomFaceState,
+    centerFacePhotoState,
+    leftFacePhotoState,
+    rightFacePhotoState,
+    upperFacePhotoState,
+    bottomFacePhotoState,
+  ]);
 
   return (
     <>
@@ -257,7 +437,7 @@ export default function CameraPageV2(): JSX.Element {
             <Camera
               ref={camera}
               style={StyleSheet.absoluteFill}
-              isActive={isCameraInitialized && isCameraActive}
+              isActive={(isCameraInitialized && isCameraActive) || !isFetching}
               device={cameraDevice}
               onError={onError}
               onInitialized={onInitialized}
@@ -299,6 +479,10 @@ export default function CameraPageV2(): JSX.Element {
               rightFace={rightFace}
               upperFace={upperFace}
               bottomFace={bottomFace}
+              leftFacePhoto={leftFacePhotoState}
+              rightFacePhoto={rightFacePhotoState}
+              upperFacePhoto={upperFacePhotoState}
+              bottomFacePhoto={bottomFacePhotoState}
             />
           </>
         ) : (
@@ -322,17 +506,11 @@ export default function CameraPageV2(): JSX.Element {
         </View>
       )}
 
-      <View style={styles.controls}>
-        <Button
-          onPress={() => setAutoMode(c => !c)}
-          title={`${autoMode ? 'Disable' : 'Enable'} AutoMode`}
-        />
-        <Button onPress={() => handlePercent()} title={`Increase`} />
-        <Button
-          onPress={() => setCameraPaused(c => !c)}
-          title={`${cameraPaused ? 'Resume' : 'Pause'} Cam`}
-        />
-      </View>
+      {isFetching && (
+        <View style={styles.indicatorContainer}>
+          <ActivityIndicator size={50} color={Colors.background} />
+        </View>
+      )}
     </>
   );
 }
@@ -372,5 +550,14 @@ const styles = StyleSheet.create({
     color: Colors.background,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  indicatorContainer: {
+    width: width,
+    height: height,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
